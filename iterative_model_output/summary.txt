@@ -11,5 +11,5 @@ Different-source pairs: 100
 
 Training epochs: 100
 Final training accuracy: 1.0000
-Final validation accuracy: 0.7000
-Test accuracy: 0.7667
+Final validation accuracy: 0.6667
+Test accuracy: 0.7000
