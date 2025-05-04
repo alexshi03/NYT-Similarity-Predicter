@@ -1,0 +1,35 @@
+NYT vs. Non-NYT Style Analysis
+============================
+
+Dataset: /home/accts/ax38/IPLaw/IP-Law-Final/features_output/articles_with_features.csv
+Total articles: 258
+NYT articles: 137
+Non-NYT articles: 121
+
+Mean feature values by source:
+        avg_sentence_length  avg_word_length  lexical_diversity   word_count  unique_word_ratio  articles_freq  prepositions_freq  conjunctions_freq  pronouns_freq  auxiliary_verbs_freq
+Source                                                                                                                                                                                   
+NYT             1000.678832         4.996681           0.648224  1000.678832           0.459778       0.090262           0.124504           0.031554       0.028246              0.052051
+NotNYT           960.851240         5.040605           0.675722   960.851240           0.485233       0.084258           0.127513           0.031234       0.028254              0.051599
+
+Feature importance:
+1. lexical_diversity: 0.1199
+2. pronouns_freq: 0.1169
+3. articles_freq: 0.1123
+4. auxiliary_verbs_freq: 0.1123
+5. word_count: 0.1008
+6. prepositions_freq: 0.0995
+7. avg_sentence_length: 0.0962
+8. unique_word_ratio: 0.0928
+9. avg_word_length: 0.0753
+10. conjunctions_freq: 0.0741
+
+Classification Report:
+              precision    recall  f1-score   support
+
+      NotNYT       0.71      0.75      0.73        36
+         NYT       0.78      0.74      0.76        42
+
+    accuracy                           0.74        78
+   macro avg       0.74      0.74      0.74        78
+weighted avg       0.75      0.74      0.74        78
