@@ -22,14 +22,12 @@ class ArticleDataProcessor:
 
     # update with csv path
     def __init__(self, data_path: str = None):
-
         self.data_path = data_path
         self.data = None
         self.stop_words = set(stopwords.words('english'))
         
     # return df with loaded article data
     def load_data(self, data_path: str = None) -> pd.DataFrame:
-
         if data_path:
             self.data_path = data_path
             
@@ -38,35 +36,45 @@ class ArticleDataProcessor:
             
         self.data = pd.read_csv(self.data_path)
         
+        # Check CSV columns
+        print(f"CSV columns: {self.data.columns.tolist()}")
+        
         # update with csv column titles, NYT being a boolean
         required_columns = [
-            'Author', 'Source', 'NYT', 'Genre', 'PubDate', 
-            'Article Title', 'Article Text'
+            'Author', 'Source', 'NYT', 'Article Title', 'Article Text'
         ]
         
         missing_columns = [col for col in required_columns if col not in self.data.columns]
         if missing_columns:
             raise ValueError(f"Missing required columns: {missing_columns}")
             
-        self.data['PubDate'] = pd.to_datetime(self.data['PubDate'])
+        # handle date parsing with error handling
+        if 'PubDate' in self.data.columns:
+            try:
+                self.data['PubDate'] = pd.to_datetime(self.data['PubDate'], errors='coerce')
+                print(f"Date conversion successful with {self.data['PubDate'].isna().sum()} missing dates")
+            except Exception as e:
+                print(f"Warning: Could not parse dates: {e}")
+                print("Continuing without date conversion")
         
         # check if alr boolean
-        self.data['NYT'] = self.data['NYT'].astype(bool)
+        try:
+            self.data['NYT'] = self.data['NYT'].astype(bool)
+        except Exception as e:
+            print(f"Warning: Could not convert NYT column to boolean: {e}")
+            print("Continuing with NYT as original type")
         
         return self.data
     
     # preprocessed text to remove and case stop words; can consider lemmatization and tokenization
     def preprocess_text(self, text: str) -> str:
-        """
-        Clean and preprocess article text.
-        
-        Args:
-            text: Raw article text
+
+        # handle None or NaN values
+        if pd.isna(text) or text is None:
+            return ""
             
-        Returns:
-            Preprocessed text
-        """
-        text = text.lower()
+        # convert to string if it's not already
+        text = str(text).lower()
         
         # remove URLs, special chars, and extra white space
         text = re.sub(r'http\S+', '', text)
@@ -78,6 +86,15 @@ class ArticleDataProcessor:
     
     # TO BE SHARPENED: FEATURE EXTRACTION
     def extract_basic_features(self, text: str) -> Dict[str, float]:
+        # Handle None or empty text
+        if not text:
+            return {
+                'avg_sentence_length': 0,
+                'avg_word_length': 0,
+                'lexical_diversity': 0,
+                'sentence_count': 0,
+                'word_count': 0,
+            }
 
         # tokenize text
         sentences = sent_tokenize(text)
@@ -99,45 +116,60 @@ class ArticleDataProcessor:
     
     # TO BE SHARPENED: STYLISTIC ELEMENTS
     def extract_stylistic_features(self, text: str) -> Dict[str, float]:
+        # Handle None or empty text
+        if not text or len(text.strip()) == 0:
+            return {'avg_sentence_complexity': 0}
 
-        doc = nlp(text)
-        
-        # POS tag frequencies
-        pos_counts = {}
-        for token in doc:
-            pos_counts[token.pos_] = pos_counts.get(token.pos_, 0) + 1
+        try:
+            # Limit text length to avoid spaCy processing errors
+            max_len = 1000000  # 1 million chars
+            if len(text) > max_len:
+                text = text[:max_len]
+                
+            doc = nlp(text)
             
-        total_tokens = len(doc)
-        pos_features = {f'pos_freq_{pos}': count / total_tokens 
-                         for pos, count in pos_counts.items()}
-        
-        # dependency relation frequencies
-        dep_counts = {}
-        for token in doc:
-            dep_counts[token.dep_] = dep_counts.get(token.dep_, 0) + 1
+            # Check if document is empty
+            if len(doc) == 0:
+                return {'avg_sentence_complexity': 0}
+                
+            # POS tag frequencies
+            pos_counts = {}
+            for token in doc:
+                pos_counts[token.pos_] = pos_counts.get(token.pos_, 0) + 1
+                
+            total_tokens = len(doc)
+            pos_features = {f'pos_freq_{pos}': count / total_tokens 
+                             for pos, count in pos_counts.items()}
             
-        dep_features = {f'dep_freq_{dep}': count / total_tokens 
-                         for dep, count in dep_counts.items()}
-        
-        # entity type frequencies
-        entity_counts = {}
-        for ent in doc.ents:
-            entity_counts[ent.label_] = entity_counts.get(ent.label_, 0) + 1
+            # dependency relation frequencies
+            dep_counts = {}
+            for token in doc:
+                dep_counts[token.dep_] = dep_counts.get(token.dep_, 0) + 1
+                
+            dep_features = {f'dep_freq_{dep}': count / total_tokens 
+                             for dep, count in dep_counts.items()}
             
-        entity_features = {f'ent_freq_{ent}': count / len(doc.ents) if len(doc.ents) > 0 else 0
-                           for ent, count in entity_counts.items()}
-        
-        stylistic_features = {**pos_features, **dep_features, **entity_features}
-        
-        # derived features
-        sentences = [sent for sent in doc.sents]
-        stylistic_features['avg_sentence_complexity'] = sum(len(list(sent.noun_chunks)) for sent in sentences) / len(sentences) if sentences else 0
-        
-        return stylistic_features
+            # entity type frequencies
+            entity_counts = {}
+            for ent in doc.ents:
+                entity_counts[ent.label_] = entity_counts.get(ent.label_, 0) + 1
+                
+            entity_features = {f'ent_freq_{ent}': count / len(doc.ents) if len(doc.ents) > 0 else 0
+                               for ent, count in entity_counts.items()}
+            
+            stylistic_features = {**pos_features, **dep_features, **entity_features}
+            
+            # derived features
+            sentences = [sent for sent in doc.sents]
+            stylistic_features['avg_sentence_complexity'] = sum(len(list(sent.noun_chunks)) for sent in sentences) / len(sentences) if sentences else 0
+            
+            return stylistic_features
+        except Exception as e:
+            print(f"Error extracting stylistic features: {e}")
+            return {'avg_sentence_complexity': 0}
     
     # returns df with original data and extracted features; determine whether to preprocess or not
     def process_articles(self, preprocess: bool = True) -> pd.DataFrame:
-
         if self.data is None:
             raise ValueError("No data loaded. Call load_data() first.")
             
@@ -238,10 +270,8 @@ class ArticleDataProcessor:
         
         return pairs_df
     
-
     # create train, validation, and test sets
     def split_data(self, pairs_df: pd.DataFrame, test_size: float = 0.2, val_size: float = 0.1) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-
         # randomize the data
         pairs_df = pairs_df.sample(frac=1, random_state=42).reset_index(drop=True)
         
