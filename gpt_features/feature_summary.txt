@@ -1,6 +1,6 @@
-Total articles: 1
+Total articles: 18
 Basic features: 88
-Advanced features: 562
+Advanced features: 574
 
 Basic feature names:
 - avg_sentence_length
@@ -155,6 +155,18 @@ Advanced feature names:
 - ent_ORDINAL_freq
 - ent_LOC_freq
 - ent_CARDINAL_freq
+- dep_prt_freq
+- ent_GPE_freq
+- ent_TIME_freq
+- dep_expl_freq
+- ent_QUANTITY_freq
+- dep_dative_freq
+- ent_EVENT_freq
+- dep_quantmod_freq
+- ent_MONEY_freq
+- dep_predet_freq
+- dep_case_freq
+- dep_punct_freq
 - word_ngram_0
 - word_ngram_1
 - word_ngram_2
