@@ -82,7 +82,7 @@ def train_with_validation(X_train, y_train, X_val, y_val, max_epochs=100, learni
         
         # Initialize model (SGDClassifier supports partial_fit for iterative training)
         print("Initializing model...")
-        model = SGDClassifier(loss='log_loss', penalty='elasticnet', alpha=0.01, 
+        model = SGDClassifier(loss='log_loss', penalty='elasticnet', alpha=0.001, 
                              learning_rate='constant', eta0=0.01, random_state=42)
         
         # Initialize tracking variables
