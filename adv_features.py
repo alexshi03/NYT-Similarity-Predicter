@@ -29,12 +29,12 @@ class AdvancedFeatureExtractor:
             sublinear_tf=True
         )
         
-        self.char_vectorizer = TfidfVectorizer(
-            analyzer='char',
-            ngram_range=(3, 5),
-            max_features=500,
-            sublinear_tf=True
-        )
+        # self.char_vectorizer = TfidfVectorizer(
+        #     analyzer='char',
+        #     ngram_range=(3, 5),
+        #     max_features=500,
+        #     sublinear_tf=True
+        # )
         
         # scaler for numerical features
         self.scaler = StandardScaler()
@@ -166,14 +166,14 @@ class AdvancedFeatureExtractor:
             columns=[f'word_ngram_{i}' for i in range(word_ngram_features.shape[1])]
         )
         
-        # fit char n-grams
-        char_ngram_features = self.char_vectorizer.fit_transform(texts)
-        char_ngram_df = pd.DataFrame(
-            char_ngram_features.toarray(),
-            columns=[f'char_ngram_{i}' for i in range(char_ngram_features.shape[1])]
-        )
+        # # fit char n-grams
+        # char_ngram_features = self.char_vectorizer.fit_transform(texts)
+        # char_ngram_df = pd.DataFrame(
+        #     char_ngram_features.toarray(),
+        #     columns=[f'char_ngram_{i}' for i in range(char_ngram_features.shape[1])]
+        # )
         
-        return word_ngram_df, char_ngram_df
+        return word_ngram_df
     
     def extract_advanced_features_batch(self, texts: List[str], include_ngrams: bool = True) -> pd.DataFrame:
 
@@ -191,12 +191,12 @@ class AdvancedFeatureExtractor:
             
         # n-gram
         if include_ngrams:
-            word_ngram_df, char_ngram_df = self.extract_ngram_features(texts)
+            word_ngram_df = self.extract_ngram_features(texts)
             
             if not syntax_df.empty:
-                combined_df = pd.concat([syntax_df, word_ngram_df, char_ngram_df], axis=1)
+                combined_df = pd.concat([syntax_df, word_ngram_df], axis=1)
             else:
-                combined_df = pd.concat([word_ngram_df, char_ngram_df], axis=1)
+                combined_df = pd.concat([word_ngram_df], axis=1)
         else:
             combined_df = syntax_df
             
@@ -226,7 +226,7 @@ class AdvancedFeatureExtractor:
         if len(text_list) > 0:
             # fit TF-IDF vectorizers on all texts
             word_features = self.word_vectorizer.fit_transform([texts[idx] for idx in index_list])
-            char_features = self.char_vectorizer.fit_transform([texts[idx] for idx in index_list])
+            # char_features = self.char_vectorizer.fit_transform([texts[idx] for idx in index_list])
             
             # map from index to position in feature matrix
             idx_to_pos = {idx: i for i, idx in enumerate(index_list)}
@@ -246,17 +246,17 @@ class AdvancedFeatureExtractor:
                     word_features[pos2:pos2+1]
                 )[0][0]
                 
-                # cosine similarity between character vectors
-                char_sim = cosine_similarity(
-                    char_features[pos1:pos1+1], 
-                    char_features[pos2:pos2+1]
-                )[0][0]
+                # # cosine similarity between character vectors
+                # char_sim = cosine_similarity(
+                #     char_features[pos1:pos1+1], 
+                #     char_features[pos2:pos2+1]
+                # )[0][0]
                 
                 pair_features = {
                     'article1_idx': idx1,
                     'article2_idx': idx2,
                     'word_ngram_similarity': word_sim,
-                    'char_ngram_similarity': char_sim
+                    # 'char_ngram_similarity': char_sim
                 }
                 
                 pair_features_list.append(pair_features)
@@ -265,7 +265,7 @@ class AdvancedFeatureExtractor:
             
             return pair_features_df
         else:
-            return pd.DataFrame(columns=['article1_idx', 'article2_idx', 'word_ngram_similarity', 'char_ngram_similarity'])
+            return pd.DataFrame(columns=['article1_idx', 'article2_idx', 'word_ngram_similarity'])
             
     # transform with fitted vectorizers
     def transform_new_texts(self, texts: List[str], include_ngrams: bool = True) -> pd.DataFrame:
@@ -285,27 +285,27 @@ class AdvancedFeatureExtractor:
         if include_ngrams:
             try:
                 word_ngram_features = self.word_vectorizer.transform(texts)
-                char_ngram_features = self.char_vectorizer.transform(texts)
+                # char_ngram_features = self.char_vectorizer.transform(texts)
                 
                 word_ngram_df = pd.DataFrame(
                     word_ngram_features.toarray(),
                     columns=[f'word_ngram_{i}' for i in range(word_ngram_features.shape[1])]
                 )
                 
-                char_ngram_df = pd.DataFrame(
-                    char_ngram_features.toarray(),
-                    columns=[f'char_ngram_{i}' for i in range(char_ngram_features.shape[1])]
-                )
+                # char_ngram_df = pd.DataFrame(
+                #     char_ngram_features.toarray(),
+                #     columns=[f'char_ngram_{i}' for i in range(char_ngram_features.shape[1])]
+                # )
                 
                 if not syntax_df.empty:
-                    combined_df = pd.concat([syntax_df, word_ngram_df, char_ngram_df], axis=1)
+                    combined_df = pd.concat([syntax_df, word_ngram_df], axis=1)
                 else:
-                    combined_df = pd.concat([word_ngram_df, char_ngram_df], axis=1)
+                    combined_df = pd.concat([word_ngram_df], axis=1)
             except:
                 print("Vectorizers have not been fitted. Using extract_ngram_features instead.")
                 if not syntax_df.empty:
-                    word_ngram_df, char_ngram_df = self.extract_ngram_features(texts)
-                    combined_df = pd.concat([syntax_df, word_ngram_df, char_ngram_df], axis=1)
+                    word_ngram_df = self.extract_ngram_features(texts)
+                    combined_df = pd.concat([syntax_df, word_ngram_df], axis=1)
                 else:
                     combined_df = pd.DataFrame()
         else:
