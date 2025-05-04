@@ -1,0 +1,15 @@
+Model training with validation
+===============================
+
+Dataset: /home/accts/ax38/IPLaw/IP-Law-Final/features_output/articles_with_features.csv
+Total articles: 258
+Feature count: 674
+
+Article pairs: 200
+Same-source pairs: 100
+Different-source pairs: 100
+
+Training epochs: 100
+Final training accuracy: 1.0000
+Final validation accuracy: 0.5333
+Test accuracy: 0.6333
