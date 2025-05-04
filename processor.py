@@ -40,15 +40,15 @@ class ArticleDataProcessor:
         
         # update with csv column titles, NYT being a boolean
         required_columns = [
-            'article_title', 'article_text', 'article_URL', 
-            'date_published', 'author', 'source', 'NYT'
+            'Author', 'Source', 'NYT', 'Genre', 'PubDate', 
+            'Article Title', 'Article Text'
         ]
         
         missing_columns = [col for col in required_columns if col not in self.data.columns]
         if missing_columns:
             raise ValueError(f"Missing required columns: {missing_columns}")
             
-        self.data['date_published'] = pd.to_datetime(self.data['date_published'])
+        self.data['PubDate'] = pd.to_datetime(self.data['PubDate'])
         
         # check if alr boolean
         self.data['NYT'] = self.data['NYT'].astype(bool)
@@ -146,10 +146,10 @@ class ArticleDataProcessor:
         
         # preprocessed text column if requested
         if preprocess:
-            processed_data['preprocessed_text'] = processed_data['article_text'].apply(self.preprocess_text)
+            processed_data['preprocessed_text'] = processed_data['Article Text'].apply(self.preprocess_text)
             text_column = 'preprocessed_text'
         else:
-            text_column = 'article_text'
+            text_column = 'Article Text'
             
         # Extract features for each article
         basic_features_list = []
@@ -190,7 +190,7 @@ class ArticleDataProcessor:
         pairs = []
         
         # group articles by author
-        author_groups = self.data.groupby('author')
+        author_groups = self.data.groupby('Author')
         
         # create same-author pairs
         same_author_pairs = []
@@ -231,10 +231,10 @@ class ArticleDataProcessor:
         pairs_df = pd.DataFrame(all_pairs, columns=['article1_idx', 'article2_idx', 'same_author'])
         
         # grab article details
-        pairs_df['article1_title'] = pairs_df['article1_idx'].apply(lambda idx: self.data.loc[idx, 'article_title'])
-        pairs_df['article2_title'] = pairs_df['article2_idx'].apply(lambda idx: self.data.loc[idx, 'article_title'])
-        pairs_df['article1_author'] = pairs_df['article1_idx'].apply(lambda idx: self.data.loc[idx, 'author'])
-        pairs_df['article2_author'] = pairs_df['article2_idx'].apply(lambda idx: self.data.loc[idx, 'author'])
+        pairs_df['article1_title'] = pairs_df['article1_idx'].apply(lambda idx: self.data.loc[idx, 'Article Title'])
+        pairs_df['article2_title'] = pairs_df['article2_idx'].apply(lambda idx: self.data.loc[idx, 'Article Title'])
+        pairs_df['article1_author'] = pairs_df['article1_idx'].apply(lambda idx: self.data.loc[idx, 'Author'])
+        pairs_df['article2_author'] = pairs_df['article2_idx'].apply(lambda idx: self.data.loc[idx, 'Author'])
         
         return pairs_df
     
