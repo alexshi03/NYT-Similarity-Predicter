@@ -9,8 +9,8 @@ import os
 import sys
 import pickle
 import traceback
+import copy
 
-# Using sklearn's LogisticRegression for iterative training
 from sklearn.linear_model import SGDClassifier
 
 def is_numeric_array(arr):
@@ -24,7 +24,6 @@ def is_numeric_array(arr):
 def count_nan_values(arr):
     """Count NaN values in a safe way"""
     if not is_numeric_array(arr):
-        # Try to convert each element to float and count NaNs
         nan_count = 0
         total_elements = 0
 
@@ -34,7 +33,6 @@ def count_nan_values(arr):
                 if np.isnan(float(item)):
                     nan_count += 1
             except:
-                # Consider non-numeric values as not NaN
                 pass
 
         return nan_count, total_elements
@@ -65,7 +63,6 @@ def train_with_validation(X_train, y_train, X_val, y_val, max_epochs=100, learni
     # Ensure data is numeric
     try:
         print("Converting features to numeric values...")
-        # Try to convert X to float
         X_train = np.array(X_train, dtype=float)
         X_val = np.array(X_val, dtype=float)
 
@@ -80,12 +77,10 @@ def train_with_validation(X_train, y_train, X_val, y_val, max_epochs=100, learni
         X_val_processed = imputer.transform(X_val)
         X_val_processed = scaler.transform(X_val_processed)
 
-        # Initialize model (SGDClassifier supports partial_fit for iterative training)
         print("Initializing model...")
         model = SGDClassifier(loss='log_loss', penalty='elasticnet', alpha=0.001,
                              learning_rate='constant', eta0=0.01, random_state=42)
 
-        # Initialize tracking variables
         train_losses = []
         val_losses = []
         train_accuracies = []
@@ -96,47 +91,37 @@ def train_with_validation(X_train, y_train, X_val, y_val, max_epochs=100, learni
         best_model = None
 
         print(f"Starting training for up to {max_epochs} epochs...")
-        # Training loop
         for epoch in range(max_epochs):
             try:
-                # Train one epoch
                 model.partial_fit(X_train_processed, y_train, classes=np.unique(y_train))
 
-                # Calculate training metrics
                 train_proba = model.predict_proba(X_train_processed)
                 train_loss = log_loss(y_train, train_proba)
                 train_pred = model.predict(X_train_processed)
                 train_accuracy = accuracy_score(y_train, train_pred)
 
-                # Calculate validation metrics
                 val_proba = model.predict_proba(X_val_processed)
                 val_loss = log_loss(y_val, val_proba)
                 val_pred = model.predict(X_val_processed)
                 val_accuracy = accuracy_score(y_val, val_pred)
 
-                # Store metrics
                 train_losses.append(train_loss)
                 val_losses.append(val_loss)
                 train_accuracies.append(train_accuracy)
                 val_accuracies.append(val_accuracy)
 
-                # Print progress
                 if verbose and (epoch + 1) % 10 == 0:
                     print(f"Epoch {epoch+1}/{max_epochs} - "
                           f"train_loss: {train_loss:.4f} - train_acc: {train_accuracy:.4f} - "
                           f"val_loss: {val_loss:.4f} - val_acc: {val_accuracy:.4f}")
 
-                # Check for improvement
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
                     no_improvement_count = 0
-                    # Store a copy of the best model
-                    import copy
                     best_model = copy.deepcopy(model)
                 else:
                     no_improvement_count += 1
 
-                # Early stopping
                 if early_stopping and no_improvement_count >= patience:
                     if verbose:
                         print(f"Early stopping after {epoch+1} epochs")
@@ -146,7 +131,6 @@ def train_with_validation(X_train, y_train, X_val, y_val, max_epochs=100, learni
                 traceback.print_exc()
                 break
 
-        # Final evaluation
         if verbose:
             print(f"\nFinal results:")
             if best_model is not None:
@@ -156,7 +140,6 @@ def train_with_validation(X_train, y_train, X_val, y_val, max_epochs=100, learni
             else:
                 print(f"Final validation accuracy: {val_accuracies[-1]:.4f}")
 
-        # Plot training history
         try:
             plt.figure(figsize=(12, 5))
 
@@ -211,31 +194,24 @@ def use_iterative_training(data_path, output_dir='iterative_model_output'):
         print(f"Loading data from {data_path}...")
         data = pd.read_csv(data_path)
 
-        # Log basic dataset info
         print(f"Dataset loaded: {len(data)} rows, {len(data.columns)} columns")
 
-        # Exclude non-feature columns
         exclude_cols = ['Author', 'Source', 'NYT', 'Genre', 'PubDate',
                        'Article Title', 'Article Text', 'URL', 'index']
 
-        # Only keep columns that actually exist
         exclude_cols = [col for col in exclude_cols if col in data.columns]
 
-        # Get feature columns
         feature_cols = [col for col in data.columns if col not in exclude_cols]
         print(f"Using {len(feature_cols)} feature columns")
 
-        # Print some sample column names
         print(f"Sample feature columns: {feature_cols[:5]}")
 
-        # Print source distribution
         print("\nSource distribution:")
         source_counts = data['Source'].value_counts()
         for source, count in source_counts.items():
             print(f"  {source}: {count} articles ({count/len(data)*100:.1f}%)")
 
         print(f"\nCreating article pairs...")
-        # Create same-source pairs
         same_source_pairs = []
         for source, group in data.groupby('Source'):
             if len(group) >= 2:
@@ -244,7 +220,6 @@ def use_iterative_training(data_path, output_dir='iterative_model_output'):
                     idx1, idx2 = np.random.choice(articles, size=2, replace=False)
                     same_source_pairs.append((idx1, idx2, 1))
 
-        # Create different-source pairs
         diff_source_pairs = []
         sources = data['Source'].unique()
         if len(sources) >= 2:
@@ -257,7 +232,6 @@ def use_iterative_training(data_path, output_dir='iterative_model_output'):
                     idx2 = np.random.choice(group2.index)
                     diff_source_pairs.append((idx1, idx2, 0))
 
-        # Combine pairs
         all_pairs = same_source_pairs + diff_source_pairs
         np.random.shuffle(all_pairs)
 
@@ -265,23 +239,19 @@ def use_iterative_training(data_path, output_dir='iterative_model_output'):
         print(f"  Same-source pairs: {len(same_source_pairs)}")
         print(f"  Different-source pairs: {len(diff_source_pairs)}")
 
-        # Extract features for pairs
         print("Extracting pair features...")
         X = []
         y = []
 
         for idx1, idx2, label in all_pairs:
             try:
-                # Check if indices are valid
                 if idx1 < len(data) and idx2 < len(data):
                     # Convert feature values to numeric
                     features1 = pd.to_numeric(data.loc[idx1, feature_cols], errors='coerce').values
                     features2 = pd.to_numeric(data.loc[idx2, feature_cols], errors='coerce').values
 
-                    # Calculate differences
                     diff_features = np.abs(features1 - features2)
 
-                    # Don't include complex features like averages to avoid issues
                     pair_features = diff_features
 
                     X.append(pair_features)
@@ -297,19 +267,16 @@ def use_iterative_training(data_path, output_dir='iterative_model_output'):
 
         print(f"Extracted features for {len(X)} pairs")
 
-        # Convert lists to arrays
         X = np.array(X)
         y = np.array(y)
 
         print(f"Feature array shape: {X.shape}")
 
-        # Safe way to check for NaNs
         nan_count, total_elements = count_nan_values(X)
         if nan_count > 0:
             print(f"Warning: Found {nan_count} NaN values in features ({nan_count/total_elements*100:.2f}%)")
             print("These will be imputed during training")
 
-        # Split data
         print("Splitting data into train/val/test sets...")
         X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
         X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp)
@@ -318,7 +285,6 @@ def use_iterative_training(data_path, output_dir='iterative_model_output'):
         print(f"Validation: {len(X_val)} samples")
         print(f"Test: {len(X_test)} samples")
 
-        # Train model with validation
         print("Training model with validation...")
         model, history = train_with_validation(
             X_train, y_train, X_val, y_val,
@@ -333,13 +299,10 @@ def use_iterative_training(data_path, output_dir='iterative_model_output'):
             print("Training failed. Check the error messages above.")
             return None, history, 0
 
-        # Final evaluation on test set
         print("\nEvaluating on test set...")
         try:
-            # Convert to float (if not already)
             X_test = np.array(X_test, dtype=float)
 
-            # Preprocess test data same as training data
             imputer = SimpleImputer(strategy='mean')
             scaler = StandardScaler()
 
@@ -358,7 +321,6 @@ def use_iterative_training(data_path, output_dir='iterative_model_output'):
             traceback.print_exc()
             test_accuracy = 0
 
-        # Save model and results
         try:
             with open(f"{output_dir}/model.pkl", 'wb') as f:
                 pickle.dump(model, f)
@@ -366,7 +328,6 @@ def use_iterative_training(data_path, output_dir='iterative_model_output'):
             with open(f"{output_dir}/history.pkl", 'wb') as f:
                 pickle.dump(history, f)
 
-            # Save summary
             with open(f"{output_dir}/summary.txt", 'w') as f:
                 f.write(f"Model training with validation\n")
                 f.write(f"===============================\n\n")
@@ -398,13 +359,10 @@ def use_iterative_training(data_path, output_dir='iterative_model_output'):
         traceback.print_exc()
         return None, {"error": str(e)}, 0
 
-
-# Usage example:
 if __name__ == "__main__":
     print("Source Similarity Analysis - Iterative Training")
     print("=" * 50)
 
-    # Get command line arguments
     if len(sys.argv) > 1:
         data_path = sys.argv[1]
     else:
@@ -426,7 +384,6 @@ if __name__ == "__main__":
         print(f"Final test accuracy: {test_accuracy:.4f}")
         print(f"Results saved to {output_dir}")
 
-        # Plot learning curves if history contains epoch data
         if history and 'epochs' in history:
             print(f"Trained for {history['epochs']} epochs")
             print("Learning curves saved as 'training_history.png'")
